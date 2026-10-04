@@ -1,52 +1,111 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hoot in Saraiki (test)</title>
+<title>Hoot speaks Saraiki</title>
 <style>
-  body { margin: 0; min-height: 100vh; background: #f6faf7; color: #1c2b23; font: 500 18px/1.5 -apple-system, sans-serif;
-    display: flex; flex-direction: column; align-items: center; padding: 28px 20px; box-sizing: border-box; }
-  .owl { font-size: 72px; transition: transform .2s; } .owl.talking { transform: scale(1.12); }
-  h1 { font-size: 22px; margin: 6px 0 2px; } .sub { color: #6b7d73; font-size: 14px; margin-bottom: 18px; }
-  button { font: inherit; font-weight: 800; color: #fff; background: #1cb0f6; border: 0; border-bottom: 4px solid #1899d6; border-radius: 16px; padding: 14px 28px; }
-  button.end { background: #ff4b4b; border-bottom-color: #d33; }
-  #status { color: #1899d6; font-weight: 700; min-height: 1.6em; margin: 14px 0 6px; }
-  #log { width: 100%; max-width: 720px; margin-top: 10px; }
-  .turn { background: #fff; border: 2px solid #e3e9e5; border-radius: 14px; padding: 10px 14px; margin-bottom: 10px; font-size: 20px; }
-  .turn.you { background: #eef7ff; } .turn b { display: block; font-size: 12px; color: #6b7d73; text-transform: uppercase; letter-spacing: .05em; }
-  .turn span { direction: rtl; unicode-bidi: plaintext; display: block; }
+  :root { --ink:#1c2b23; --soft:#6b7d73; --line:#e3e9e5; --bg:#f6faf7; --blue:#1cb0f6; --blue-d:#1899d6; --green:#58cc02; --green-d:#46a302; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { overflow-x:hidden; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:500 17px/1.45 -apple-system, Roboto, sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:22px 16px 60px; }
+  .owl { font-size:64px; text-align:center; transition:transform .2s; } .owl.talking { transform:scale(1.12); }
+  h1 { font-size:24px; text-align:center; margin:4px 0 2px; } .sub { color:var(--soft); text-align:center; font-size:14px; margin:0 0 16px; }
+  h2 { font-size:18px; margin:26px 0 8px; }
+  .btn { display:block; width:100%; font:inherit; font-weight:800; color:#fff; background:var(--blue); border:0; border-bottom:4px solid var(--blue-d); border-radius:16px; padding:14px 18px; }
+  .btn.end { background:#ff4b4b; border-bottom-color:#d33; }
+  #status { color:var(--blue-d); font-weight:700; min-height:1.5em; margin:10px 0 4px; text-align:center; }
+  .turn { background:#fff; border:2px solid var(--line); border-radius:14px; padding:9px 13px; margin-bottom:8px; font-size:19px; }
+  .turn.you { background:#eef7ff; } .turn b { display:block; font-size:11px; color:var(--soft); text-transform:uppercase; letter-spacing:.05em; }
+  .turn span { direction:rtl; unicode-bidi:plaintext; display:block; }
+  select, input { font:inherit; width:100%; padding:11px 12px; border:2px solid var(--line); border-radius:12px; background:#fff; margin-bottom:8px; }
+  .row { display:flex; align-items:center; gap:12px; background:#fff; border:2px solid var(--line); border-radius:14px; padding:9px 12px; margin-bottom:8px; }
+  .row.on { border-color:var(--green); background:#f1ffe6; }
+  .play { flex:none; width:44px; height:44px; border-radius:50%; border:0; border-bottom:3px solid var(--green-d); background:var(--green); color:#fff; font-size:17px; }
+  .txt { flex:1; min-width:0; overflow:hidden; } .en { font-size:15px; color:var(--soft); }
+  .sk { font:600 22px/2.3 "Noto Nastaliq Urdu","Geeza Pro","Noto Naskh Arabic",serif; direction:rtl; text-align:right; overflow-wrap:anywhere; padding:2px 0 6px; }
+  .ro { font:13px Menlo, Consolas, monospace; color:#3d5247; overflow-wrap:anywhere; }
+  .q { font-size:11px; color:#a35b00; border:1px solid #e0b060; border-radius:6px; padding:0 5px; margin-left:6px; }
+  .count { color:var(--soft); font-size:14px; margin:0 0 8px; }
 </style></head>
-<body>
+<body><main>
   <div class="owl" id="owl">🦉</div>
-  <h1>Hoot in Saraiki</h1>
-  <div class="sub">A test. Tap Start, allow the microphone, and talk in Saraiki. Each talk is limited to 5 minutes.</div>
-  <button id="go">Start talking</button>
+  <h1>Hoot speaks Saraiki</h1>
+  <p class="sub">A test. Talk with Hoot, or tap any word to hear him say it.</p>
+
+  <button class="btn" id="go">🎤 Talk to Hoot in Saraiki</button>
   <div id="status"></div>
   <div id="log"></div>
+
+  <h2>Hear Hoot say it</h2>
+  <select id="sec"></select>
+  <input id="find" type="search" placeholder="Search in English or Saraiki">
+  <p class="count" id="count"></p>
+  <div id="list"></div>
+</main>
 <script src="elevenlabs-client.js"></script>
 <script>
 (function () {
-  var $ = function (id) { return document.getElementById(id); }, session = null;
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ── Live conversation ──
+  var session = null;
   function status(t) { $('status').textContent = t; }
   function add(who, text) {
     var d = document.createElement('div'); d.className = 'turn' + (who === 'You' ? ' you' : '');
     var b = document.createElement('b'); b.textContent = who; var s = document.createElement('span'); s.textContent = text;
     d.appendChild(b); d.appendChild(s); $('log').insertBefore(d, $('log').firstChild);
   }
-  function stopped() { session = null; $('go').textContent = 'Start talking'; $('go').className = ''; $('owl').className = 'owl'; }
+  function stopped() { session = null; $('go').textContent = '🎤 Talk to Hoot in Saraiki'; $('go').className = 'btn'; $('owl').className = 'owl'; }
   $('go').onclick = function () {
     if (session) { session.endSession(); return; }
+    if (clip) clip.pause();
     status('Connecting…');
-    Promise.resolve().then(function () {
-      return ElevenLabsClient.Conversation.startSession({
-        agentId: 'agent_3001m43ybytsetq8kf489bqqqp8p',
-        connectionType: 'webrtc',
-        onConnect: function () { status(''); $('go').textContent = 'End conversation'; $('go').className = 'end'; },
-        onDisconnect: function () { status('Ended.'); stopped(); },
-        onError: function (m) { status('Error: ' + m); },
-        onModeChange: function (m) { var sp = m && m.mode === 'speaking'; $('owl').className = 'owl' + (sp ? ' talking' : ''); if (session) status(sp ? '' : 'Listening. Just talk.'); },
-        onMessage: function (m) { if (m && m.message && /\S/.test(m.message.replace(/\./g, ''))) add(m.source === 'user' || m.role === 'user' ? 'You' : 'Hoot', m.message); }
-      });
+    ElevenLabsClient.Conversation.startSession({
+      agentId: 'agent_3001m43ybytsetq8kf489bqqqp8p', connectionType: 'webrtc',
+      onConnect: function () { status(''); $('go').textContent = 'End conversation'; $('go').className = 'btn end'; },
+      onDisconnect: function () { status('Ended.'); stopped(); },
+      onError: function (m) { status('Error: ' + m); },
+      onModeChange: function (m) { var sp = m && m.mode === 'speaking'; $('owl').className = 'owl' + (sp ? ' talking' : ''); if (session) status(sp ? '' : 'Listening. Just talk.'); },
+      onMessage: function (m) { if (m && m.message && /\S/.test(m.message.replace(/\./g, ''))) add(m.source === 'user' || m.role === 'user' ? 'You' : 'Hoot', m.message.replace(/\[[a-z ]+\]\s*/gi, '')); }
     }).then(function (s) { session = s; }).catch(function (e) { status('Could not start: ' + (e && e.message || e)); stopped(); });
   };
+
+  // ── The phrasebook, spoken ──
+  var SECTIONS = [], clip = null, playing = null;
+  function play(n, rowEl) {
+    if (clip) { clip.pause(); if (playing) playing.className = 'row'; }
+    clip = new Audio('audio/' + n + '.mp3'); playing = rowEl; rowEl.className = 'row on';
+    clip.onended = function () { rowEl.className = 'row'; };
+    clip.play();
+  }
+  function render() {
+    var q = $('find').value.trim().toLowerCase(), si = $('sec').value, list = $('list'), shown = 0;
+    list.textContent = '';
+    SECTIONS.forEach(function (s, i) {
+      if (!q && String(i) !== si) return;
+      s.rows.forEach(function (r) {
+        if (q && r[1].toLowerCase().indexOf(q) < 0 && r[2].indexOf(q) < 0) return;
+        if (shown >= 200) return;
+        shown++;
+        var row = document.createElement('div'); row.className = 'row';
+        var b = document.createElement('button'); b.className = 'play'; b.textContent = '▶'; b.onclick = function () { play(r[0], row); };
+        var t = document.createElement('div'); t.className = 'txt';
+        var en = document.createElement('div'); en.className = 'en'; en.textContent = r[1];
+        if (r[4]) { var k = document.createElement('span'); k.className = 'q'; k.textContent = 'reading to check'; en.appendChild(k); }
+        var sk = document.createElement('div'); sk.className = 'sk'; sk.textContent = r[2];
+        var ro = document.createElement('div'); ro.className = 'ro'; ro.textContent = r[3];
+        t.appendChild(en); t.appendChild(sk); t.appendChild(ro); row.appendChild(b); row.appendChild(t); list.appendChild(row);
+      });
+    });
+    $('count').textContent = shown + (shown === 200 ? '+' : '') + ' entries' + (q ? ' matching "' + q + '"' : '');
+  }
+  fetch('entries.json').then(function (r) { return r.json(); }).then(function (d) {
+    SECTIONS = d;
+    d.forEach(function (s, i) { var o = document.createElement('option'); o.value = i; o.textContent = s.title + ' (' + s.rows.length + ')'; $('sec').appendChild(o); });
+    var start = d.findIndex(function (s) { return /Common Talk/.test(s.title); }); $('sec').value = start < 0 ? 0 : start;
+    render();
+  });
+  $('sec').onchange = function () { $('find').value = ''; render(); };
+  $('find').oninput = render;
 })();
 </script>
 </body></html>
